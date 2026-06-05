@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { Check, Ellipsis, Star } from 'lucide-vue-next'
 import { placeholderBg } from './placeholder'
+import { mockDate } from './assetMeta'
 import IconTooltip from '@/components/ui/IconTooltip.vue'
 import PreviewBadge from './PreviewBadge.vue'
 import GroupBadge from './GroupBadge.vue'
@@ -44,6 +45,9 @@ defineEmits<{
 }>()
 
 const placeholderStyle = computed(() => placeholderBg(props.name))
+// Progressive-column metadata (wide list view) — date derived deterministically
+// from the name, same as the details panel.
+const created = computed(() => mockDate(props.name).date)
 </script>
 
 <template>
@@ -51,7 +55,7 @@ const placeholderStyle = computed(() => placeholderBg(props.name))
     type="button"
     :aria-pressed="selected"
     :data-name="name"
-    class="group/row relative flex w-full items-center gap-2.5 rounded-lg p-1.5 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-azure-600"
+    class="group/row @container relative flex w-full items-center gap-2.5 rounded-lg p-1.5 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-azure-600"
     :class="
       selected
         ? 'bg-secondary-background ring-1 ring-inset ring-base-foreground'
@@ -82,20 +86,34 @@ const placeholderStyle = computed(() => placeholderBg(props.name))
       </span>
     </div>
 
-    <!-- Name + meta (truncates to make room for the right-side actions) -->
+    <!-- Name (+ badges) — flex-1. Compact: format·dimensions sits UNDER the name.
+         Wide (≥ threshold): that meta moves into dedicated columns (below), and the
+         under-name line is hidden. PREV./"+N" badges stay on the name line so the
+         columns to the right line up across rows. -->
     <div class="flex min-w-0 flex-1 flex-col gap-0.5">
-      <span class="truncate text-sm leading-tight text-base-foreground">{{ name }}</span>
       <div class="flex min-w-0 items-center gap-1.5">
-        <span class="truncate text-xs leading-tight text-muted-foreground">
-          {{ format }} {{ dimensions }}
-        </span>
-        <PreviewBadge v-if="preview" />
-        <!-- "+N" group badge sits where PREV. does (the meta row). -->
+        <span class="truncate text-sm leading-tight text-base-foreground">{{ name }}</span>
+        <PreviewBadge v-if="preview" class="shrink-0" />
         <IconTooltip v-if="groupCount > 0" label="View all outputs">
           <GroupBadge :count="groupCount" @open="$emit('open-group')" />
         </IconTooltip>
       </div>
+      <span class="truncate text-xs leading-tight text-muted-foreground @min-[500px]:hidden">
+        {{ format }} {{ dimensions }}
+      </span>
     </div>
+
+    <!-- Progressive columns — appear as the dock widens (container-query threshold;
+         column headers/sorting are a later pass). Order: Type · Dimensions · Date. -->
+    <span class="hidden w-12 shrink-0 truncate text-xs text-muted-foreground @min-[500px]:block">
+      {{ format }}
+    </span>
+    <span class="hidden w-24 shrink-0 truncate text-xs tabular-nums text-muted-foreground @min-[500px]:block">
+      {{ dimensions || '—' }}
+    </span>
+    <span class="hidden w-28 shrink-0 truncate text-xs text-muted-foreground @min-[500px]:block">
+      {{ created }}
+    </span>
 
     <!-- Right actions: More (hover) · Favorite (gold when favorited, else
          revealed on hover). The selected check lives on the thumbnail. -->
