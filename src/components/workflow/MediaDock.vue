@@ -378,11 +378,13 @@ function onMenuAction(id: string, target?: string) {
           :key="a.name"
           v-bind="a"
           :selected="sel.has(a.name)"
+          :group-count="f.groupCounts.value[a.name] ?? 0"
           @select="onCardClick(i, $event)"
           @contextmenu="onCardContextMenu(a.name, $event)"
           @toggle-favorite="f.favoriteFromCard(a.name)"
           @menu="onCardMore(a.name, $event)"
           @inspect="f.openInspect(a.name)"
+          @open-group="f.openJob(a.jobId)"
         />
       </div>
 

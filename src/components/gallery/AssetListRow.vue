@@ -4,6 +4,7 @@ import { Check, Ellipsis, Star } from 'lucide-vue-next'
 import { placeholderBg } from './placeholder'
 import IconTooltip from '@/components/ui/IconTooltip.vue'
 import PreviewBadge from './PreviewBadge.vue'
+import GroupBadge from './GroupBadge.vue'
 
 // Compact list-view row for the dock (Figma 2448-54316): square thumbnail + a
 // truncating filename + "format · dimensions" meta, with the actions on the RIGHT
@@ -20,6 +21,9 @@ const props = withDefaults(
     selected?: boolean
     favorite?: boolean
     preview?: boolean
+    /** Job-group cover: number of ADDITIONAL outputs behind it (0 = not a group).
+     *  Drives the stacked-thumbnail edge + the clickable "+N" badge. */
+    groupCount?: number
   }>(),
   {
     name: 'image00',
@@ -28,9 +32,16 @@ const props = withDefaults(
     selected: false,
     favorite: false,
     preview: false,
+    groupCount: 0,
   },
 )
-defineEmits<{ select: [e: MouseEvent]; 'toggle-favorite': []; menu: [rect: DOMRect]; inspect: [] }>()
+defineEmits<{
+  select: [e: MouseEvent]
+  'toggle-favorite': []
+  menu: [rect: DOMRect]
+  inspect: []
+  'open-group': []
+}>()
 
 const placeholderStyle = computed(() => placeholderBg(props.name))
 </script>
@@ -49,9 +60,19 @@ const placeholderStyle = computed(() => placeholderBg(props.name))
     @click="$emit('select', $event)"
     @dblclick="$emit('inspect')"
   >
-    <!-- Thumbnail (40×40) with the selected check pill in its top-right corner. -->
+    <!-- Thumbnail (40×40) with the selected check pill in its top-right corner.
+         Job-group cover: a card edge peeks bottom-right and the front thumb shrinks
+         4px (stays top-left), same trick as the grid cards. -->
     <div data-thumb class="relative size-10 shrink-0">
-      <div class="size-10 overflow-hidden rounded-md" :style="placeholderStyle" />
+      <div
+        v-if="groupCount > 0"
+        class="absolute bottom-0 right-0 size-9 rounded-md border border-border-default bg-secondary-background"
+      />
+      <div
+        class="absolute overflow-hidden rounded-md"
+        :class="groupCount > 0 ? 'left-0 top-0 size-9' : 'inset-0'"
+        :style="placeholderStyle"
+      />
       <span
         v-if="selected"
         class="absolute right-1 top-1 flex size-5 items-center justify-center rounded-full bg-white shadow-[1px_1px_3px_rgba(0,0,0,0.35)]"
@@ -69,6 +90,10 @@ const placeholderStyle = computed(() => placeholderBg(props.name))
           {{ format }} {{ dimensions }}
         </span>
         <PreviewBadge v-if="preview" />
+        <!-- "+N" group badge sits where PREV. does (the meta row). -->
+        <IconTooltip v-if="groupCount > 0" label="View all outputs">
+          <GroupBadge :count="groupCount" @open="$emit('open-group')" />
+        </IconTooltip>
       </div>
     </div>
 

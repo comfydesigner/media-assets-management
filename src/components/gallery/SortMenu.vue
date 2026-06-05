@@ -48,7 +48,7 @@ function onTriggerClick() {
           ref="btnRef"
           type="button"
           :aria-label="iconOnly ? 'Sort by' : undefined"
-          class="flex h-10 shrink-0 items-center rounded-lg border border-[var(--stroke)] hover:bg-secondary-background focus:outline-none"
+          class="flex h-10 shrink-0 items-center rounded-lg border border-border-default hover:bg-secondary-background focus:outline-none"
           :class="iconOnly ? 'w-10 justify-center' : 'w-fit'"
           @click="onTriggerClick"
         >

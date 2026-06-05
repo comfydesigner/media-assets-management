@@ -173,7 +173,7 @@ function onDragEnd() {
 
 <template>
   <aside
-    class="flex h-full w-56 flex-col border-r border-border-default bg-secondary-background px-4 pb-4 pt-3"
+    class="flex h-full w-56 flex-col border-r border-border-default bg-base-background px-4 pb-4 pt-3"
   >
     <!-- Header -->
     <div class="flex h-12 items-center px-4">

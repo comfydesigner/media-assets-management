@@ -7,6 +7,7 @@ import MenuItem from '@/components/ui/MenuItem.vue'
 import Tooltip from '@/components/ui/Tooltip.vue'
 import TooltipTrigger from '@/components/ui/TooltipTrigger.vue'
 import TooltipContent from '@/components/ui/TooltipContent.vue'
+import IconTooltip from '@/components/ui/IconTooltip.vue'
 import { SORT_LABELS, type DockLayout, type SortOrder, type ViewOptions } from './types'
 
 const props = withDefaults(
@@ -88,6 +89,10 @@ function onTriggerClick() {
 function toggle<K extends keyof ViewOptions>(key: K) {
   emit('update:viewOptions', { ...props.viewOptions, [key]: !props.viewOptions[key] })
 }
+
+// List view is inherently a name+meta row, so the two metadata toggles are locked
+// ON (the AssetListRow always shows them) — shown disabled with a tooltip.
+const nameDetailsLocked = computed(() => props.variant === 'dock' && props.dockLayout === 'list')
 
 const triggerClass = computed(() =>
   props.variant === 'dock'
@@ -203,23 +208,34 @@ const triggerClass = computed(() =>
           </MenuItem>
 
           <!-- Metadata visibility: two independent toggles. Placement is derived
-               from the layout (Grid → below the tile · Masonry → hover overlay),
-               so no per-layout disabling is needed. Both off = clean image grid. -->
+               from the layout (Grid → below the tile · Masonry → hover overlay).
+               In the dock's LIST view they're locked ON (a list row is name+meta by
+               definition) — shown disabled with a tooltip explaining why. -->
           <div class="my-1 h-px w-full shrink-0 bg-border-subtle" />
-          <MenuItem
-            :checked="viewOptions.showName"
-            :reserve-trailing="true"
-            @select="toggle('showName')"
-          >
-            Show file name
-          </MenuItem>
-          <MenuItem
-            :checked="viewOptions.showDetails"
-            :reserve-trailing="true"
-            @select="toggle('showDetails')"
-          >
-            Show file details
-          </MenuItem>
+          <template v-if="nameDetailsLocked">
+            <IconTooltip label="Always shown in list view" side="left">
+              <MenuItem :checked="true" :reserve-trailing="true" disabled>Show file name</MenuItem>
+            </IconTooltip>
+            <IconTooltip label="Always shown in list view" side="left">
+              <MenuItem :checked="true" :reserve-trailing="true" disabled>Show file details</MenuItem>
+            </IconTooltip>
+          </template>
+          <template v-else>
+            <MenuItem
+              :checked="viewOptions.showName"
+              :reserve-trailing="true"
+              @select="toggle('showName')"
+            >
+              Show file name
+            </MenuItem>
+            <MenuItem
+              :checked="viewOptions.showDetails"
+              :reserve-trailing="true"
+              @select="toggle('showDetails')"
+            >
+              Show file details
+            </MenuItem>
+          </template>
         </Menu>
       </PopoverContent>
     </PopoverPortal>
