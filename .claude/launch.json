@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "media-assets-proto",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 5180,
+      "cwd": "/Users/alex/Documents/media assets proto - willie/media-assets-proto"
+    }
+  ]
+}
