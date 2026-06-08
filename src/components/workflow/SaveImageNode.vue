@@ -279,13 +279,14 @@ onBeforeUnmount(() => window.removeEventListener('pointerdown', onOutside, true)
           <span class="w-32 shrink-0 pt-2 text-sm text-node-foreground-secondary">tags</span>
           <div class="relative min-w-0 flex-1">
             <!-- Filled box: `tertiary` fill (one step up from the node's `secondary`
-                 body); chips `button-hovered` (one step up again) pop on it. -->
+                 body); chips `secondary-background-high` (two steps up) pop on it
+                 with stronger contrast. -->
             <div class="rounded-md bg-tertiary-background px-2.5 py-1.5" @pointerdown.stop>
               <div v-if="appliedTags.size" class="flex flex-wrap gap-1">
                 <span
                   v-for="t in [...appliedTags]"
                   :key="t"
-                  class="flex h-5 items-center gap-1 rounded-full bg-button-hovered px-1.5 text-xs text-base-foreground"
+                  class="flex h-5 items-center gap-1 rounded-full bg-secondary-background-high px-1.5 text-xs text-base-foreground"
                 >
                   {{ t }}
                   <button

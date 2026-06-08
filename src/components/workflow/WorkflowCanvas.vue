@@ -16,8 +16,13 @@ import Minimap from './Minimap.vue'
 import CanvasControls from './CanvasControls.vue'
 import { useAssetDrag } from '@/composables/useAssetDrag'
 import { useTabs } from '@/composables/useTabs'
+import { useGalleryFilters } from '@/composables/useGalleryFilters'
 
 const canvasRef = ref<HTMLElement | null>(null)
+
+// Shared asset-selection state (singleton) — read-only here, used to decide who
+// owns Cmd/Ctrl+A on a workflow tab (see onKeyDown).
+const filters = useGalleryFilters()
 
 // Pan/zoom of the canvas (canvas coords).
 const panX = ref(60)
@@ -228,6 +233,18 @@ function onKeyDown(e: KeyboardEvent) {
   if ((e.key === 'Delete' || e.key === 'Backspace') && !isTyping() && selectedIds.value.size) {
     e.preventDefault()
     deleteSelected()
+    return
+  }
+  // Cmd/Ctrl+A → select every node on the canvas. Disambiguation (per the same
+  // "click one thing to claim the keyboard" model the asset grid uses): if the
+  // user has an asset selected, they've claimed the dock, so Cmd+A is theirs
+  // (handled in useAssetSelection) and the canvas stays out of it. Otherwise the
+  // canvas owns Cmd+A — which makes it the sensible default on a workflow tab,
+  // no node pre-selection required.
+  if ((e.metaKey || e.ctrlKey) && (e.key === 'a' || e.key === 'A') && !isTyping()) {
+    if (filters.selectedAssets.size > 0) return
+    e.preventDefault()
+    selectedIds.value = new Set(nodes.value.map((n) => n.id))
   }
 }
 

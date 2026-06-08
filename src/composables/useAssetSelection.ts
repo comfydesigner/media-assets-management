@@ -288,6 +288,24 @@ export function useAssetSelection(
       return
     }
 
+    // Cmd/Ctrl+A → select every loaded asset in THIS panel. Scope is handled for
+    // free by the early `selected.size === 0` return above: the user "enters" the
+    // panel by clicking one asset first, which both (a) tells us the asset grid —
+    // not the canvas — owns the keyboard right now (no fragile focus-vs-canvas
+    // detection needed), and (b) keeps us from hijacking the browser's native
+    // select-all when no asset context is active. We sweep the rendered cards in
+    // `containerRef`, so this matches Comfy's paginated library — only assets
+    // currently loaded into the DOM get selected, which is the intended behavior.
+    if ((e.metaKey || e.ctrlKey) && (e.key === 'a' || e.key === 'A')) {
+      e.preventDefault()
+      const cards = containerRef.value?.querySelectorAll<HTMLElement>('button[aria-pressed]')
+      cards?.forEach((c) => {
+        const n = c.dataset.name
+        if (n) selected.add(n)
+      })
+      return
+    }
+
     const arrows = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown']
     if (!arrows.includes(e.key)) return
     const cards = [...(containerRef.value?.querySelectorAll<HTMLElement>('button[aria-pressed]') ?? [])]

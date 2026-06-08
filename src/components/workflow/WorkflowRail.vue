@@ -8,12 +8,19 @@ import WorkflowIcon from '@/components/icons/WorkflowIcon.vue'
 import TemplateIcon from '@/components/icons/TemplateIcon.vue'
 
 // Sidebar order matches Figma 2345-53812. Top: history · image-ai-edit · node ·
-// ai-model · workflow · template (image-ai-edit / media is the active item). The
+// ai-model · workflow · template. image-ai-edit (index 1) is the Media Assets
+// panel toggle — the only interactive rail item for now; the rest are inert. The
 // custom icons (image-ai-edit / node / ai-model / workflow / template / the C
 // logo) live in src/assets/icons/sidebar and are inlined as the components in
 // src/components/icons; `history` + the bottom four are standard lucide.
+const MEDIA_INDEX = 1
 const topIcons = [History, ImageAiEditIcon, NodeIcon, AiModelIcon, WorkflowIcon, TemplateIcon]
 const bottomIcons = [HelpCircle, Keyboard, SquareTerminal, Settings]
+
+// `mediaActive` lights the Media Assets icon while its panel is open; clicking it
+// toggles the panel (handled by WorkflowView).
+defineProps<{ mediaActive?: boolean }>()
+const emit = defineEmits<{ toggleMedia: [] }>()
 </script>
 
 <template>
@@ -40,10 +47,13 @@ const bottomIcons = [HelpCircle, Keyboard, SquareTerminal, Settings]
         :key="i"
         class="flex size-9 items-center justify-center rounded-lg transition-colors hover:bg-button-hovered"
         :class="
-          i === 1
+          i === MEDIA_INDEX && mediaActive
             ? 'bg-button-hovered text-base-foreground'
             : 'text-muted-foreground hover:text-base-foreground'
         "
+        :aria-label="i === MEDIA_INDEX ? 'Toggle Media Assets panel' : undefined"
+        :aria-pressed="i === MEDIA_INDEX ? mediaActive : undefined"
+        @click="i === MEDIA_INDEX && emit('toggleMedia')"
       >
         <component :is="Icon" class="size-[18px]" :stroke-width="1.5" />
       </button>

@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { Check, Download, Ellipsis, Play, Star } from 'lucide-vue-next'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { Check, Download, Ellipsis, Pause, Play, Star } from 'lucide-vue-next'
 import MiddleTruncate from '@/components/ui/MiddleTruncate.vue'
 import IconTooltip from '@/components/ui/IconTooltip.vue'
 import PreviewBadge from './PreviewBadge.vue'
 import AssetThumb from './AssetThumb.vue'
 import GroupBadge from './GroupBadge.vue'
-import { mockDuration, mockPolyCount, mockSampleRate } from './assetMeta'
+import { fmtClock, mockDuration, mockDurationSeconds, mockPolyCount, mockSampleRate } from './assetMeta'
 import type { MediaType } from './types'
 
 const props = withDefaults(
@@ -68,6 +68,51 @@ const isThree = computed(() => props.mediaType === '3d')
 // rendered model is the signifier; orbiting happens in Quick Look / the lightbox.)
 const hasOverlay = computed(() => isVideo.value || isAudio.value)
 const duration = computed(() => mockDuration(props.name))
+
+/* ── Mock playback (video/audio) ─────────────────────────────────────────────
+ * No real media — clicking the thumbnail's play affordance flips it to pause and
+ * a 1s ticker advances a fake playhead, so the duration badge reads
+ * "elapsed / total" and counts up. Pausing freezes it; finishing or DESELECTING
+ * the card resets to the start. State is per-card and purely local. */
+const totalSeconds = computed(() => mockDurationSeconds(props.name))
+const playing = ref(false)
+const elapsed = ref(0)
+const started = computed(() => elapsed.value > 0)
+// Badge text: a quiet total until playback begins, then "elapsed / total".
+const badgeText = computed(() =>
+  started.value ? `${fmtClock(elapsed.value)} / ${duration.value}` : duration.value,
+)
+
+let timer = 0
+function stopTimer() {
+  if (timer) { clearInterval(timer); timer = 0 }
+}
+function pause() {
+  playing.value = false
+  stopTimer()
+}
+function play() {
+  if (elapsed.value >= totalSeconds.value) elapsed.value = 0 // replay from start
+  playing.value = true
+  stopTimer()
+  timer = window.setInterval(() => {
+    elapsed.value += 1
+    if (elapsed.value >= totalSeconds.value) {
+      elapsed.value = totalSeconds.value
+      pause()
+    }
+  }, 1000)
+}
+function togglePlay() {
+  playing.value ? pause() : play()
+}
+function resetPlayback() {
+  pause()
+  elapsed.value = 0
+}
+// Deselecting the asset tears playback down (per the spec).
+watch(() => props.selected, (sel) => { if (!sel) resetPlayback() })
+onBeforeUnmount(stopTimer)
 
 // Manage mode with BOTH the name and details rows hidden → the info row (which
 // normally hosts the PREV. / "+N" badges) is gone, so relocate those badges onto
@@ -151,22 +196,33 @@ const rootClass = computed(() => {
             groupCount > 0 ? 'left-0 top-0 h-[calc(100%-4px)] w-[calc(100%-4px)]' : 'inset-0',
           ]"
         >
+          <!-- AssetCard owns the duration badge for video/audio (it animates during
+               mock playback), so AssetThumb never draws its own static pill here. -->
           <AssetThumb
             :name="name"
             :media-type="mediaType"
-            :show-duration="!cornerCluster"
+            :show-duration="false"
             :tight-corner="groupCount > 0"
           />
 
-        <!-- Video/audio: play affordance revealed on hover -->
+        <!-- Video/audio: play/pause affordance. Hover-revealed when idle; stays
+             visible while playing or mid-clip so pause/resume is always reachable.
+             Mock only — toggles the local playback ticker, no real media. -->
         <div
           v-if="hasOverlay"
-          class="pointer-events-none absolute inset-0 z-[6] flex items-center justify-center opacity-0 transition-opacity group-hover:opacity-100"
-          aria-hidden="true"
+          class="absolute inset-0 z-[6] flex items-center justify-center transition-opacity"
+          :class="playing || started ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'"
         >
-          <span class="flex size-10 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-sm">
-            <Play class="size-5 translate-x-[1px]" fill="currentColor" :stroke-width="0" />
-          </span>
+          <button
+            type="button"
+            class="pointer-events-auto flex size-10 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-sm transition-colors hover:bg-black/70"
+            :aria-label="playing ? 'Pause' : 'Play'"
+            @click.stop="togglePlay"
+            @dblclick.stop
+          >
+            <Pause v-if="playing" class="size-5" fill="currentColor" :stroke-width="0" />
+            <Play v-else class="size-5 translate-x-[1px]" fill="currentColor" :stroke-width="0" />
+          </button>
         </div>
 
         <!-- Persistent favorite badge: smaller/less intrusive than the hover pill,
@@ -274,8 +330,19 @@ const rootClass = computed(() => {
             v-if="hasOverlay"
             class="inline-flex min-h-4 items-center rounded-full bg-black/70 px-1.5 text-[11px] font-medium leading-none tabular-nums text-white"
           >
-            {{ duration }}
+            {{ badgeText }}
           </span>
+        </div>
+
+        <!-- Standalone duration badge when there's no corner cluster (the common
+             grid case). Same position as AssetThumb's old pill; shows the live
+             "elapsed / total" during mock playback. -->
+        <div
+          v-if="hasOverlay && !cornerCluster"
+          class="pointer-events-none absolute z-[7] inline-flex min-h-4 items-center rounded-full bg-black/70 px-1.5 text-[11px] font-medium leading-none tabular-nums text-white"
+          :class="groupCount > 0 ? 'bottom-1 right-1' : 'bottom-2 right-2'"
+        >
+          {{ badgeText }}
         </div>
         </div>
       </div>

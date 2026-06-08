@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { Plus, User } from 'lucide-vue-next'
+import { FlaskConical, Plus, User } from 'lucide-vue-next'
 import WorkflowTab from './WorkflowTab.vue'
 import ThemeToggle from './ThemeToggle.vue'
 import RandomizeButton from './RandomizeButton.vue'
 import IconTooltip from '@/components/ui/IconTooltip.vue'
+import { useExperiments } from '@/composables/useExperiments'
 import type { TabDef } from '@/composables/useTabs'
+
+const experiments = useExperiments()
 
 defineProps<{
   tabs: TabDef[]
@@ -54,6 +57,31 @@ defineEmits<{
     <!-- Right -->
     <div class="flex h-full items-center gap-1 pr-2">
       <RandomizeButton v-if="showShuffle" @randomize="$emit('shuffle')" />
+      <!-- "Future options" — prototype feature flags. Lit when any experiment is
+           on; currently toggles the header Layout switcher. -->
+      <IconTooltip
+        :label="
+          experiments.headerLayoutSwitcher
+            ? 'Future options: on (Layout on header)'
+            : 'Future options'
+        "
+        side="bottom"
+      >
+        <button
+          type="button"
+          class="flex size-7 items-center justify-center rounded-md transition-colors hover:bg-button-hovered focus:outline-none"
+          :class="
+            experiments.headerLayoutSwitcher
+              ? 'text-azure-600'
+              : 'text-base-foreground'
+          "
+          :aria-label="experiments.headerLayoutSwitcher ? 'Future options: on' : 'Future options'"
+          :aria-pressed="experiments.headerLayoutSwitcher"
+          @click="experiments.headerLayoutSwitcher = !experiments.headerLayoutSwitcher"
+        >
+          <FlaskConical class="size-4" :stroke-width="1.5" />
+        </button>
+      </IconTooltip>
       <!-- Global light/dark toggle — available on every page, persists to
            localStorage. -->
       <ThemeToggle />

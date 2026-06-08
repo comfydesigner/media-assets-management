@@ -51,6 +51,25 @@ function navigate(id: string) {
   activeId.value = id
 }
 
+/**
+ * Open (or focus) the single Media Assets tab. Closing it removes it from the
+ * strip, so the dock's "Open" button must be able to recreate it — but there is
+ * only ever ONE, so reuse it if it's still around. Recreated at the front to
+ * restore its original leftmost slot. `navigate` handles remembering the
+ * workflow we came from.
+ */
+function openMedia() {
+  if (!tabs.value.some((t) => t.kind === 'media')) {
+    tabs.value.unshift({
+      id: 'media',
+      label: 'Media Assets',
+      icon: markRaw(ImageAiEditIcon),
+      kind: 'media',
+    })
+  }
+  navigate('media')
+}
+
 /** Return from Media Assets to the previous workflow tab. */
 function backToWorkflow() {
   const t = returnTab.value
@@ -103,6 +122,7 @@ export function useTabs() {
     activeTab,
     returnTab,
     navigate,
+    openMedia,
     backToWorkflow,
     addTab,
     openAssetWorkflows,

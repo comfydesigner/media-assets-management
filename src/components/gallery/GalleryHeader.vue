@@ -4,8 +4,23 @@ import SearchBar from './SearchBar.vue'
 import SizeSlider from './SizeSlider.vue'
 import SortMenu from './SortMenu.vue'
 import ViewsMenu from './ViewsMenu.vue'
+import LayoutSwitcher, { type LayoutKind } from './LayoutSwitcher.vue'
 import type { SortOrder, ViewOptions } from './types'
-import type { useGalleryFilters } from '@/composables/useGalleryFilters'
+import { useGalleryFilters } from '@/composables/useGalleryFilters'
+import { useExperiments } from '@/composables/useExperiments'
+
+const experiments = useExperiments()
+
+// Translate a segmented-control choice into mode + masonry orientation
+// (same mapping the Views menu uses for its "Layout: …" rows).
+function selectLayout(filters: ReturnType<typeof useGalleryFilters>, layout: LayoutKind) {
+  if (layout === 'grid') {
+    filters.setMode('manage')
+  } else {
+    filters.setMode('browse')
+    filters.setMasonryAxis(layout === 'masonry-column' ? 'column' : 'row')
+  }
+}
 
 defineProps<{
   filters: ReturnType<typeof useGalleryFilters>
@@ -78,6 +93,14 @@ defineEmits<{
         :model-value="sizeStep"
         @update:model-value="$emit('update:sizeStep', $event)"
       />
+      <!-- "Future options" experiment: Layout moves out of the Views menu into a
+           segmented control on the header. -->
+      <LayoutSwitcher
+        v-if="experiments.headerLayoutSwitcher"
+        :mode="filters.mode.value"
+        :masonry-axis="filters.masonryAxis.value"
+        @select="selectLayout(filters, $event)"
+      />
       <SortMenu
         :model-value="sortOrder"
         :icon-only="condenseSort"
@@ -88,7 +111,7 @@ defineEmits<{
         :sort-order="sortOrder"
         :view-options="viewOptions"
         :browse="filters.mode.value === 'browse'"
-        :show-layout="true"
+        :show-layout="!experiments.headerLayoutSwitcher"
         :mode="filters.mode.value"
         :masonry-axis="filters.masonryAxis.value"
         @update:sort-order="$emit('update:sortOrder', $event)"

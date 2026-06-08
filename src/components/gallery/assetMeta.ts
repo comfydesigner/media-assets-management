@@ -34,10 +34,17 @@ export function mockDate(name: string) {
    Deterministic from the name hash so a clip/track always shows the same
    duration, fps, sample-rate, and waveform across the card, Quick Look, and the
    lightbox. No real media files in the prototype. */
+/** Total length of a clip/track in whole seconds (5s .. ~10min), deterministic. */
+export function mockDurationSeconds(name: string): number {
+  return 5 + (hash(name) % 596)
+}
+/** Seconds → "M:SS" clock. Shared by the duration badge + the playback ticker. */
+export function fmtClock(secs: number): string {
+  const s = Math.max(0, Math.floor(secs))
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+}
 export function mockDuration(name: string): string {
-  const secs = 5 + (hash(name) % 596) // 5s .. ~10min
-  const m = Math.floor(secs / 60)
-  return `${m}:${String(secs % 60).padStart(2, '0')}`
+  return fmtClock(mockDurationSeconds(name))
 }
 const FPS = ['24fps', '30fps', '60fps'] as const
 export const mockFps = (name: string) => at(FPS, hash(name) >>> 6)

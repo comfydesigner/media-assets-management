@@ -5,11 +5,28 @@ import WorkflowView from './components/workflow/WorkflowView.vue'
 import TabBar from './components/layout/TabBar.vue'
 import BlankPage from './components/layout/BlankPage.vue'
 import TooltipProvider from './components/ui/TooltipProvider.vue'
+import { onBeforeUnmount, onMounted } from 'vue'
 import { useGalleryFilters } from './composables/useGalleryFilters'
 import { useTabs } from './composables/useTabs'
 
 const filters = useGalleryFilters()
 const tabs = useTabs()
+
+// App-shell guard: Cmd/Ctrl+A must never trigger the browser's native
+// "select all text on the page" (which highlights the whole UI — tabs, canvas
+// labels, etc.). We swallow the default everywhere EXCEPT inside real text
+// fields, where select-all-the-field's-text is the expected behavior. The asset
+// grid's own Cmd+A (select all loaded assets) is handled separately in
+// useAssetSelection and is unaffected — preventDefault doesn't stop other
+// listeners, only the native text-selection default.
+function onWindowKeydown(e: KeyboardEvent) {
+  if (!(e.metaKey || e.ctrlKey) || (e.key !== 'a' && e.key !== 'A')) return
+  const ae = document.activeElement as HTMLElement | null
+  if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.isContentEditable)) return
+  e.preventDefault()
+}
+onMounted(() => window.addEventListener('keydown', onWindowKeydown))
+onBeforeUnmount(() => window.removeEventListener('keydown', onWindowKeydown))
 </script>
 
 <template>
@@ -50,7 +67,7 @@ const tabs = useTabs()
       <WorkflowView
         v-else-if="tabs.activeTab.value.kind === 'workflow'"
         :key="tabs.activeId.value"
-        @open-media="tabs.navigate('media')"
+        @open-media="tabs.openMedia"
       />
       <BlankPage v-else :label="tabs.activeTab.value.label" />
     </div>
