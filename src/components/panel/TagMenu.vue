@@ -7,20 +7,31 @@ import MenuItem from '@/components/ui/MenuItem.vue'
 import IconTooltip from '@/components/ui/IconTooltip.vue'
 
 export type TagSort = 'custom' | 'alpha'
+export type TagMatch = 'all' | 'any'
 
-defineProps<{ mode: TagSort }>()
-const emit = defineEmits<{ add: []; select: [mode: TagSort] }>()
+defineProps<{ mode: TagSort; matchMode: TagMatch }>()
+const emit = defineEmits<{
+  add: []
+  select: [mode: TagSort]
+  'set-match': [mode: TagMatch]
+}>()
 
-// Combined "tag options" menu: Add tags + sort mode, behind a single button.
+// Combined "tag options" menu: Add tags + sort mode + multi-tag match mode,
+// behind a single button.
 const open = ref(false)
 const triggerRef = ref<HTMLElement | null>(null)
+// Add tags starts the inline add-tag input in the panel, so the menu must get out
+// of the way → close. Sort / Match are quick toggles (like the Views menu) — leave
+// the menu OPEN so several can be flipped without reopening it each time.
 function addTags() {
   open.value = false
   emit('add')
 }
 function select(mode: TagSort) {
-  open.value = false
   emit('select', mode)
+}
+function selectMatch(mode: TagMatch) {
+  emit('set-match', mode)
 }
 </script>
 
@@ -43,7 +54,7 @@ function select(mode: TagSort) {
     </IconTooltip>
     <PopoverAnchor :reference="triggerRef || undefined" class="hidden" />
     <PopoverPortal>
-      <PopoverContent align="end" :side-offset="4" class="z-50 w-64 outline-none">
+      <PopoverContent align="start" :side-offset="4" class="z-50 w-64 outline-none">
         <Menu>
           <!-- Add tags (with trailing +) -->
           <button
@@ -72,6 +83,23 @@ function select(mode: TagSort) {
             @select="select('alpha')"
           >
             Sort by alphabet (A → Z)
+          </MenuItem>
+
+          <!-- How multiple selected tags combine (mirrors the chip-row toggle). -->
+          <div class="h-px w-full shrink-0 bg-border-subtle" />
+          <MenuItem
+            :checked="matchMode === 'all'"
+            :reserve-trailing="true"
+            @select="selectMatch('all')"
+          >
+            Match all
+          </MenuItem>
+          <MenuItem
+            :checked="matchMode === 'any'"
+            :reserve-trailing="true"
+            @select="selectMatch('any')"
+          >
+            Match any
           </MenuItem>
         </Menu>
       </PopoverContent>

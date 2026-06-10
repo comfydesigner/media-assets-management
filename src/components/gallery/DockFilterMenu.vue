@@ -102,6 +102,38 @@ const subValues = computed(() => {
 })
 const subDef = computed(() => (openSub.value ? filterByKey(openSub.value) : null))
 
+/* ── Flat value search (mirrors the tab SearchBar) ───────────────────────────
+ * When the root search has text, we ALSO match VALUES across every category and
+ * surface them inline as "Type: value" rows — so you can pick "Film Grain"
+ * straight from the root without first drilling into LoRA model. */
+const searching = computed(() => query.value.trim().length > 0)
+const valueMatches = computed(() => {
+  const q = query.value.trim().toLowerCase()
+  if (!q) return [] as { key: string; value: string }[]
+  const out: { key: string; value: string }[] = []
+  for (const def of FILTERS) {
+    if (def.kind !== 'multi') continue // values only exist for multi-select filters
+    for (const value of optionsFor(def.key)) {
+      if (value.toLowerCase().includes(q)) out.push({ key: def.key, value })
+    }
+  }
+  return out
+})
+// Unified navigable root list: searching → matching categories THEN matching
+// values; idle → the grouped categories. `active` indexes into this.
+type RootRow = { t: 'cat'; def: FilterDef } | { t: 'value'; key: string; value: string }
+const navItems = computed<RootRow[]>(() =>
+  searching.value
+    ? [
+        ...rootCats.value.map((def) => ({ t: 'cat' as const, def })),
+        ...valueMatches.value.map((v) => ({ t: 'value' as const, key: v.key, value: v.value })),
+      ]
+    : rootNav.value.map((def) => ({ t: 'cat' as const, def })),
+)
+function navIndexOfCat(def: FilterDef) {
+  return navItems.value.findIndex((it) => it.t === 'cat' && it.def.key === def.key)
+}
+
 watch(query, () => (active.value = 0))
 watch(subQuery, () => (subActive.value = 0))
 
@@ -145,7 +177,7 @@ function openSubFor(key: string) {
   openSub.value = key
   subQuery.value = ''
   subActive.value = 0
-  const idx = rootNav.value.findIndex((c) => c.key === key)
+  const idx = navIndexOfCat(filterByKey(key))
   if (idx >= 0) active.value = idx
   nextTick(() => {
     clampSub()
@@ -275,23 +307,25 @@ function handleKey(e: KeyboardEvent) {
     return
   }
 
-  const cats = rootNav.value
+  const items = navItems.value
   const openKey = predictFlip() ? 'ArrowLeft' : 'ArrowRight'
   if (e.key === 'ArrowDown') {
     claim()
-    if (cats.length) active.value = (active.value + 1) % cats.length
+    if (items.length) active.value = (active.value + 1) % items.length
   } else if (e.key === 'ArrowUp') {
     claim()
-    if (cats.length) active.value = (active.value - 1 + cats.length) % cats.length
+    if (items.length) active.value = (active.value - 1 + items.length) % items.length
   } else if (e.key === 'Enter') {
     claim()
-    const c = cats[active.value]
-    if (c) activateCat(c)
+    const it = items[active.value]
+    if (!it) return
+    if (it.t === 'cat') activateCat(it.def)
+    else toggleOption(it.key, it.value) // flat value hit — toggle in place, stay open
   } else if (e.key === openKey) {
-    const c = cats[active.value]
-    if (c && hasSub(c)) {
+    const it = items[active.value]
+    if (it && it.t === 'cat' && hasSub(it.def)) {
       claim()
-      openSubFor(c.key)
+      openSubFor(it.def.key)
     }
   }
 }
@@ -339,8 +373,9 @@ const triggerClass =
         <div class="h-px w-full bg-border-subtle" />
 
         <div class="max-h-[60vh] overflow-y-auto px-2 py-2">
-          <template v-for="(group, gi) in groups" :key="group.label">
-            <template v-if="true">
+          <!-- IDLE: grouped categories with drill-in submenus. -->
+          <template v-if="!searching">
+            <template v-for="(group, gi) in groups" :key="group.label">
               <div
                 class="px-2 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
                 :class="gi !== 0 ? 'mt-3' : ''"
@@ -353,9 +388,9 @@ const triggerClass =
                 type="button"
                 :data-cat="def.key"
                 class="flex h-8 w-full items-center gap-2 rounded-sm px-2 text-left transition-colors"
-                :class="rootNav.indexOf(def) === active ? 'bg-secondary-background' : ''"
+                :class="navIndexOfCat(def) === active ? 'bg-secondary-background' : ''"
                 @mouseenter="onCatEnter(def)"
-                @mousemove="hoverReady && (active = rootNav.indexOf(def))"
+                @mousemove="hoverReady && (active = navIndexOfCat(def))"
                 @click="activateCat(def)"
               >
                 <component :is="def.icon" class="size-4 shrink-0 text-muted-foreground" :stroke-width="1.5" />
@@ -382,9 +417,70 @@ const triggerClass =
             </template>
           </template>
 
-          <div v-if="rootNav.length === 0" class="px-2 py-1.5 text-sm text-muted-foreground">
-            No matching actions
-          </div>
+          <!-- SEARCHING: flat results — matching categories (still drill) PLUS
+               matching values as "Type: value" rows that toggle in place. -->
+          <template v-else>
+            <template v-for="(it, idx) in navItems" :key="it.t === 'cat' ? `c:${it.def.key}` : `v:${it.key}:${it.value}`">
+              <!-- category label match → opens its submenu -->
+              <button
+                v-if="it.t === 'cat'"
+                type="button"
+                :data-cat="it.def.key"
+                class="flex h-8 w-full items-center gap-2 rounded-sm px-2 text-left transition-colors"
+                :class="idx === active ? 'bg-secondary-background' : ''"
+                @mouseenter="onCatEnter(it.def)"
+                @mousemove="hoverReady && (active = idx)"
+                @click="activateCat(it.def)"
+              >
+                <component :is="it.def.icon" class="size-4 shrink-0 text-muted-foreground" :stroke-width="1.5" />
+                <span class="min-w-0 flex-1 truncate text-sm leading-normal text-base-foreground">
+                  {{ it.def.label }}
+                </span>
+                <span
+                  v-if="it.def.kind !== 'toggle' && appliedCount(it.def) > 0"
+                  class="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-tertiary-background px-1 text-xs tabular-nums text-muted-foreground"
+                >
+                  {{ appliedCount(it.def) }}
+                </span>
+                <ChevronRight
+                  v-else-if="it.def.kind !== 'toggle'"
+                  class="size-4 shrink-0 text-muted-foreground"
+                  :stroke-width="1.5"
+                />
+              </button>
+              <!-- value match → toggle directly, no drill needed. Single truncating
+                   line (no pill): the dock menu is narrow, so a wrapping "Type: value"
+                   pill would break onto two lines — muted category prefix + emphasized
+                   value, ellipsized if long (full text in the row title). -->
+              <button
+                v-else
+                type="button"
+                :title="`${filterByKey(it.key).label}: ${it.value}`"
+                class="flex h-8 w-full items-center gap-2 rounded-sm px-2 text-left transition-colors"
+                :class="idx === active ? 'bg-secondary-background' : ''"
+                @mousemove="hoverReady && (active = idx)"
+                @click="toggleOption(it.key, it.value)"
+              >
+                <component
+                  :is="filterByKey(it.key).icon"
+                  class="size-4 shrink-0 text-muted-foreground"
+                  :stroke-width="1.5"
+                />
+                <span class="min-w-0 flex-1 truncate text-sm leading-normal">
+                  <span class="text-muted-foreground">{{ filterByKey(it.key).label }}:&nbsp;</span>
+                  <span class="font-medium text-base-foreground">{{ it.value }}</span>
+                </span>
+                <Check
+                  v-if="isApplied(it.key, it.value)"
+                  class="size-4 shrink-0 text-base-foreground"
+                  :stroke-width="1.5"
+                />
+              </button>
+            </template>
+            <div v-if="navItems.length === 0" class="px-2 py-1.5 text-sm text-muted-foreground">
+              No matches
+            </div>
+          </template>
         </div>
 
         <!-- Clear filters (matches the SearchBar footer treatment). -->

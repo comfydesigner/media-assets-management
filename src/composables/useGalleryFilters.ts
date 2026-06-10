@@ -55,6 +55,20 @@ function createGalleryFilters() {
   const selectedTags = reactive(new Set<string>())
   /** Anchor for Shift-range select. Set on every non-Shift tag click. */
   const tagAnchor = ref<string | null>(null)
+  /**
+   * How multiple selected tags combine:
+   *   'all' (default) → intersection (asset must have EVERY selected tag). This is
+   *                     the "drill into a subset" / nested-folder behavior.
+   *   'any'           → union (asset has at least one). A broad gather.
+   * One GLOBAL mode (never per-pair), so N tags can't form ambiguous mixed logic.
+   */
+  const tagMatch = ref<'all' | 'any'>('all')
+  function toggleTagMatch() {
+    tagMatch.value = tagMatch.value === 'all' ? 'any' : 'all'
+  }
+  function setTagMatch(mode: 'all' | 'any') {
+    tagMatch.value = mode
+  }
 
   /** Reactive tag list + counts, so tags can be added at runtime (the + button). */
   const tags = reactive<string[]>([...ALL_TAGS])
@@ -424,9 +438,11 @@ function createGalleryFilters() {
       return
     }
 
-    // Plain click: single select (Finder-style replace).
-    selectedTags.clear()
-    selectedTags.add(tag)
+    // Plain click: additive toggle — clicking tags BUILDS UP a filter (drill into
+    // the intersection), and clicking an active tag removes it. This is what makes
+    // tags feel like nested folders for the VFX flow (vs. the old replace-on-click).
+    if (selectedTags.has(tag)) selectedTags.delete(tag)
+    else selectedTags.add(tag)
     tagAnchor.value = tag
   }
 
@@ -579,7 +595,12 @@ function createGalleryFilters() {
     }
 
     if (selectedTags.size > 0) {
-      result = result.filter((a) => a.tags.some((t) => selectedTags.has(t)))
+      // 'all' → intersection (must have every selected tag · the folder-drill
+      // default); 'any' → union (has at least one).
+      result =
+        tagMatch.value === 'all'
+          ? result.filter((a) => [...selectedTags].every((t) => a.tags.includes(t)))
+          : result.filter((a) => a.tags.some((t) => selectedTags.has(t)))
     }
 
     // Media type is REAL (driven by each asset's `mediaType`) — its applied values
@@ -704,14 +725,14 @@ function createGalleryFilters() {
   /** Header text per user spec:
    *  - 0 tags: active category label
    *  - 1 tag : `Tagged with "name"`
-   *  - 2+    : `Tagged with selected`
+   *  - 2+    : `Tagged with multiple tags`
    */
   const headerTitle = computed(() => {
     if (selectedTags.size === 1) {
       const [only] = selectedTags
       return `Tagged with "${only}"`
     }
-    if (selectedTags.size > 1) return 'Tagged with selected'
+    if (selectedTags.size > 1) return 'Tagged with multiple tags'
     return CATEGORY_LABELS[activeCategory.value]
   })
 
@@ -741,6 +762,9 @@ function createGalleryFilters() {
     // actions
     selectCategory,
     selectTag,
+    tagMatch,
+    toggleTagMatch,
+    setTagMatch,
     addTag,
     toggleTag,
     renameTag,

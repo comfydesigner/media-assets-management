@@ -5,6 +5,7 @@ import SizeSlider from './SizeSlider.vue'
 import SortMenu from './SortMenu.vue'
 import ViewsMenu from './ViewsMenu.vue'
 import LayoutSwitcher, { type LayoutKind } from './LayoutSwitcher.vue'
+import { ghostButtonClass } from '@/components/ui/ghostButton'
 import type { SortOrder, ViewOptions } from './types'
 import { useGalleryFilters } from '@/composables/useGalleryFilters'
 import { useExperiments } from '@/composables/useExperiments'
@@ -76,12 +77,10 @@ defineEmits<{
         <button
           type="button"
           :disabled="count === 0"
-          class="flex h-8 shrink-0 items-center justify-center rounded-lg p-2 enabled:hover:bg-secondary-background disabled:cursor-not-allowed disabled:opacity-40"
+          :class="ghostButtonClass"
           @click="$emit('toggleSelectAll')"
         >
-          <span class="whitespace-nowrap text-sm leading-normal text-base-foreground">
-            {{ allSelected ? 'Deselect all' : 'Select all' }}
-          </span>
+          {{ allSelected ? 'Deselect all' : 'Select all' }}
         </button>
       </div>
     </div>
@@ -152,12 +151,10 @@ defineEmits<{
       <button
         type="button"
         :disabled="count === 0"
-        class="flex h-8 shrink-0 items-center justify-center rounded-lg p-2 enabled:hover:bg-secondary-background disabled:cursor-not-allowed disabled:opacity-40"
+        :class="ghostButtonClass"
         @click="$emit('toggleSelectAll')"
       >
-        <span class="whitespace-nowrap text-sm leading-normal text-base-foreground">
-          {{ allSelected ? 'Deselect all' : 'Select all' }}
-        </span>
+        {{ allSelected ? 'Deselect all' : 'Select all' }}
       </button>
 
       <div class="min-w-0 flex-1" />

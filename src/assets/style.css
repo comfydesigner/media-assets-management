@@ -160,6 +160,21 @@ body {
   line-height: 1;
 }
 
+/* Desktop-app convention: the UI chrome is not text-selectable, so dragging or
+   marquee-selecting across panels (e.g. the tag list, cards) never leaves a stray
+   blue text highlight. Real text fields stay fully selectable so typing/editing
+   and select-all-in-field still work. */
+body {
+  -webkit-user-select: none;
+  user-select: none;
+}
+input,
+textarea,
+[contenteditable='true'] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
 /* ──────────────────────────────────────────────────────────────────────────
    Scrollbars — ONE custom style everywhere a scroll region appears. Replaces
    both the chunkier UA default (e.g. the dock details popover) and the drifting

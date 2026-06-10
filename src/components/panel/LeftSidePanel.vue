@@ -11,7 +11,7 @@ import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import NavItem from './NavItem.vue'
 import ImageAiEditIcon from '@/components/icons/ImageAiEditIcon.vue'
 import TagContextMenu from './TagContextMenu.vue'
-import TagMenu, { type TagSort } from './TagMenu.vue'
+import TagMenu, { type TagMatch, type TagSort } from './TagMenu.vue'
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 import { MAX_TAG_LENGTH, type Category } from '@/components/gallery/types'
 
@@ -21,6 +21,7 @@ const props = defineProps<{
   tags: string[]
   tagCounts: Record<string, number>
   sortMode: TagSort
+  matchMode: TagMatch
 }>()
 const emit = defineEmits<{
   'select-category': [value: Category]
@@ -31,6 +32,7 @@ const emit = defineEmits<{
   'delete-selected-tags': []
   'move-tag': [from: number, to: number]
   'set-sort': [mode: TagSort]
+  'set-match': [mode: TagMatch]
 }>()
 
 const topNav: { label: string; icon: any; key: Category }[] = [
@@ -206,8 +208,10 @@ function onDragEnd() {
           </div>
           <TagMenu
             :mode="sortMode"
+            :match-mode="matchMode"
             @add="startAdding"
             @select="emit('set-sort', $event)"
+            @set-match="emit('set-match', $event)"
           />
         </div>
 

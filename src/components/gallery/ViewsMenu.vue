@@ -127,7 +127,11 @@ const triggerClass = computed(() =>
     <PopoverAnchor :reference="btnRef || undefined" class="hidden" />
 
     <PopoverPortal>
-      <PopoverContent align="end" :side-offset="4" class="z-50 w-64 outline-none">
+      <PopoverContent
+        :align="variant === 'dock' ? 'start' : 'end'"
+        :side-offset="4"
+        class="z-50 w-64 outline-none"
+      >
         <Menu>
           <!-- Dock view modes: List / Grid: Small / Grid: Large (Figma 1780-35593).
                Small & Large are two distinct responsive sizes (min/max breakpoints,

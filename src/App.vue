@@ -51,6 +51,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onWindowKeydown))
           :tags="filters.displayedTags.value"
           :tag-counts="filters.tagCounts"
           :sort-mode="filters.tagSort.value"
+          :match-mode="filters.tagMatch.value"
           @select-category="filters.selectCategory"
           @select-tag="filters.selectTag"
           @add-tag="filters.addTag"
@@ -59,6 +60,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onWindowKeydown))
           @delete-selected-tags="filters.deleteSelectedTags"
           @move-tag="filters.moveTag"
           @set-sort="filters.setTagSort"
+          @set-match="filters.setTagMatch"
         />
         <Gallery :filters="filters" />
       </template>
